@@ -20,18 +20,22 @@ export const routes = [
     handler: (req, res) => {
       const { title, description } = req.body;
 
-      const task = {
-        id: randomUUID(),
-        title,
-        description,
-        completed_at: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
+      if (title && description) {
+        const task = {
+          id: randomUUID(),
+          title,
+          description,
+          completed_at: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
 
-      database.insert("tasks", task);
+        database.insert("tasks", task);
 
-      return res.writeHead(201).end(JSON.stringify(task));
+        return res.writeHead(201).end(JSON.stringify(task));
+      }
+
+      return res.writeHead(400).end();
     },
   },
   {
@@ -39,6 +43,15 @@ export const routes = [
     path: buildRoutePath("/tasks/:id"),
     handler: (req, res) => {
       const { id } = req.params;
+
+      const task = database.select("tasks", { id });
+      const hasTask = task.length === 0;
+
+      if (hasTask) {
+        return res
+          .writeHead(404)
+          .end(JSON.stringify({ message: "Registro não existe" }));
+      }
 
       database.delete("tasks", id);
 
@@ -52,7 +65,17 @@ export const routes = [
       const { id } = req.params;
       const { title, description } = req.body;
 
-      const task = database.selectById("tasks", id);
+      const [task] = database.select("tasks", { id });
+
+      if (task.length === 0) {
+        return res
+          .writeHead(404)
+          .end(JSON.stringify({ message: "Registro não existe" }));
+      }
+
+      if (!title || !description) {
+        return res.writeHead(400).end();
+      }
 
       const updatedTask = {
         ...task,
@@ -73,6 +96,12 @@ export const routes = [
       const { id } = req.params;
 
       const task = database.selectById("tasks", id);
+
+      if (!task || task?.length === 0) {
+        return res
+          .writeHead(404)
+          .end(JSON.stringify({ message: "Registro não existe" }));
+      }
 
       const updatedTask = {
         ...task,
